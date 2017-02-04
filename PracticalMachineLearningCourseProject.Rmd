@@ -1,0 +1,91 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Hiroshi Ikeda"
+date: "2017, Feb5"
+output: html_document
+---
+
+#Summary
+I tried two modling methods, classification tree and random forest. For this dataset, model accuracy for Random forest was better than one for classification tree. 
+
+#Load Packages
+```{r}
+library(AppliedPredictiveModeling)
+library(caret)
+library(rattle)
+library(rpart.plot)
+library(randomForest)
+```
+
+#Import Data
+```{r}
+setwd("C:/Users/Hiroshi Ikeda/Desktop")
+training <- read.csv("pml-training.csv", na.strings=c("NA",""), header=TRUE)
+colnames_train <- colnames(training)
+testing <- read.csv("pml-testing.csv", na.strings=c("NA",""), header=TRUE)
+colnames_test <- colnames(testing)
+```
+
+#Clean NA data and unnecessary columns
+```{r}
+training <- training[, colSums(is.na(training)) == 0]
+testing <- testing[, colSums(is.na(testing)) == 0]
+
+training <- training[, -c(1:7)]
+testing <- testing[, -c(1:7)]
+```
+
+#Devide training data into training and test dataset
+```{r}
+set.seed(1111)
+ids_small <- createDataPartition(y=training$classe, p=0.25, list=FALSE)
+small <- training[ids_small,]
+remainder <- training[-ids_small,]
+
+set.seed(1111)
+inTrain <- createDataPartition(y=small$classe, p=0.6, list=FALSE)
+small_training <- small[inTrain,]
+small_testing <- small[-inTrain,]
+```
+
+#Classification Tree
+##Model build (5-fold cross validation)
+```{r}
+set.seed(1111)
+control <- trainControl(method = "cv", number = 5)
+fit_rpart <- train(classe ~ ., data = small_training, method = "rpart", trControl = control)
+print(fit_rpart, digits=3)
+fancyRpartPlot(fit_rpart$finalModel)
+```
+
+##Prediction
+```{r}
+predict_rpart <- predict(fit_rpart, newdata=small_testing)
+print(confusionMatrix(predict_rpart, small_testing$classe), digits=4)
+```
+Accuracy is 0.4768
+
+#Random Forest
+##Model build (5-fold cross validation)
+```{r cache=TRUE}
+set.seed(1111)
+fit_rf <- train(classe ~ ., data = small_training, method = "rf", trControl = control)
+print(fit_rf, digits = 4)
+```
+
+##Prediction
+```{r}
+predict_rf <- predict(fit_rf, newdata=small_testing)
+print(confusionMatrix(predict_rf, small_testing$classe), digits=4)
+```
+Accuracy is 0.9689
+
+Random forest method resulted in better accuracy than classification tree method.So decided Random forest model.
+
+#Prediction on Test dataset
+```{r}
+predict_rf_test <- predict(fit_rf, newdata=testing)
+predict_rf_test
+```
+
+
